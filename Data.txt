@@ -1,0 +1,176 @@
+Option Explicit
+
+Sub Find_Suitable_Raw_Material()
+
+    Dim wsRM As Worksheet
+    Dim wsInput As Worksheet
+    Dim wsResult As Worksheet
+
+    Dim req1 As Double, req2 As Double, req3 As Double
+    Dim allowance As Double
+
+    Dim rm1 As Double, rm2 As Double, rm3 As Double
+    Dim a As Double, b As Double, c As Double
+
+    Dim lastRow As Long
+    Dim resultRow As Long
+    Dim i As Long
+
+    Dim matched As Boolean
+    Dim orientation As String
+
+    allowance = 10
+
+    Set wsRM = ThisWorkbook.Worksheets("RM_F")
+    Set wsInput = ThisWorkbook.Worksheets("INPUT")
+
+    req1 = CDbl(wsInput.Range("B2").Value)
+    req2 = CDbl(wsInput.Range("C2").Value)
+    req3 = CDbl(wsInput.Range("D2").Value)
+
+    'Create / clear result sheet
+    On Error Resume Next
+    Set wsResult = ThisWorkbook.Worksheets("RM_RESULT")
+    On Error GoTo 0
+
+    If wsResult Is Nothing Then
+        Set wsResult = ThisWorkbook.Worksheets.Add
+        wsResult.Name = "RM_RESULT"
+    Else
+        wsResult.Cells.Clear
+    End If
+
+    'Result headers
+    wsResult.Range("A1:H1").Value = Array( _
+        "RM Code", _
+        "RM Description", _
+        "RM Size 1", _
+        "RM Size 2", _
+        "RM Size 3", _
+        "Required Size", _
+        "Orientation", _
+        "Extra Material")
+
+    resultRow = 2
+
+    lastRow = wsRM.Cells(wsRM.Rows.Count, "A").End(xlUp).Row
+
+    For i = 2 To lastRow
+
+        If IsNumeric(wsRM.Cells(i, "C").Value) _
+        And IsNumeric(wsRM.Cells(i, "D").Value) _
+        And IsNumeric(wsRM.Cells(i, "E").Value) Then
+
+            rm1 = CDbl(wsRM.Cells(i, "C").Value)
+            rm2 = CDbl(wsRM.Cells(i, "D").Value)
+            rm3 = CDbl(wsRM.Cells(i, "E").Value)
+
+            matched = False
+            orientation = ""
+
+            'Try all 6 possible orientations
+
+            a = rm1: b = rm2: c = rm3
+            If a >= req1 + allowance _
+            And b >= req2 + allowance _
+            And c >= req3 + allowance Then
+                matched = True
+                orientation = "1-2-3"
+            End If
+
+            If Not matched Then
+                a = rm1: b = rm3: c = rm2
+                If a >= req1 + allowance _
+                And b >= req2 + allowance _
+                And c >= req3 + allowance Then
+                    matched = True
+                    orientation = "1-3-2"
+                End If
+            End If
+
+            If Not matched Then
+                a = rm2: b = rm1: c = rm3
+                If a >= req1 + allowance _
+                And b >= req2 + allowance _
+                And c >= req3 + allowance Then
+                    matched = True
+                    orientation = "2-1-3"
+                End If
+            End If
+
+            If Not matched Then
+                a = rm2: b = rm3: c = rm1
+                If a >= req1 + allowance _
+                And b >= req2 + allowance _
+                And c >= req3 + allowance Then
+                    matched = True
+                    orientation = "2-3-1"
+                End If
+            End If
+
+            If Not matched Then
+                a = rm3: b = rm1: c = rm2
+                If a >= req1 + allowance _
+                And b >= req2 + allowance _
+                And c >= req3 + allowance Then
+                    matched = True
+                    orientation = "3-1-2"
+                End If
+            End If
+
+            If Not matched Then
+                a = rm3: b = rm2: c = rm1
+                If a >= req1 + allowance _
+                And b >= req2 + allowance _
+                And c >= req3 + allowance Then
+                    matched = True
+                    orientation = "3-2-1"
+                End If
+            End If
+
+            'Write matching materials
+            If matched Then
+
+                wsResult.Cells(resultRow, "A").Value = wsRM.Cells(i, "A").Value
+                wsResult.Cells(resultRow, "B").Value = wsRM.Cells(i, "B").Value
+
+                wsResult.Cells(resultRow, "C").Value = rm1
+                wsResult.Cells(resultRow, "D").Value = rm2
+                wsResult.Cells(resultRow, "E").Value = rm3
+
+                wsResult.Cells(resultRow, "F").Value = _
+                    req1 & " x " & req2 & " x " & req3
+
+                wsResult.Cells(resultRow, "G").Value = orientation
+
+                wsResult.Cells(resultRow, "H").Value = _
+                    (rm1 * rm2 * rm3) - _
+                    (req1 * req2 * req3)
+
+                resultRow = resultRow + 1
+
+            End If
+
+        End If
+
+    Next i
+
+    'Formatting
+    With wsResult
+
+        .Rows(1).Font.Bold = True
+        .Rows(1).Interior.Color = RGB(31, 78, 121)
+        .Rows(1).Font.Color = RGB(255, 255, 255)
+
+        .Columns("A:H").AutoFit
+
+        If resultRow = 2 Then
+            MsgBox "No suitable Raw Material found!", vbInformation
+        Else
+            MsgBox resultRow - 2 & _
+                " suitable Raw Materials found.", vbInformation
+        End If
+
+    End With
+
+End Sub
